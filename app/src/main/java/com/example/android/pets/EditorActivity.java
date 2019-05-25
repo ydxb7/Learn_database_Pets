@@ -123,7 +123,7 @@ public class EditorActivity extends AppCompatActivity {
         int weight = Integer.parseInt(weightString);  // string -> int
 
         // Create database helper
-        PetDbHelper mDbHelper = new PetDbHelper(this);
+//        PetDbHelper mDbHelper = new PetDbHelper(this);
 
         // Create a ContentValues object where column names are the keys,
         // and pet attributes from the editor are the values.

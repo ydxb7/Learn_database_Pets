@@ -27,6 +27,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -39,7 +40,9 @@ import com.example.android.pets.data.PetDbHelper;
  */
 public class CatalogActivity extends AppCompatActivity {
     private final String LOG_TAG = CatalogActivity.class.getSimpleName();
-    /** Database helper that will provide us access to the database */
+    /**
+     * Database helper that will provide us access to the database
+     */
     private PetDbHelper mDbHelper;
 
     @Override
@@ -66,14 +69,37 @@ public class CatalogActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+//        displayDatabaseInfo_text();
         displayDatabaseInfo();
     }
+
+    private  void displayDatabaseInfo(){
+        // Define a projection that specifies which columns from the database
+        // you will actually use after this query.
+        String[] projection = {
+                PetEntry._ID,
+                PetEntry.COLUMN_PET_NAME,
+                PetEntry.COLUMN_PET_BREED,
+                PetEntry.COLUMN_PET_GENDER,
+                PetEntry.COLUMN_PET_WEIGHT};
+
+        // Perform a query on the pets table
+        Cursor cursor = getContentResolver().query(PetEntry.CONTENT_URI, projection, null, null, null);
+
+        // Find ListView to populate
+        ListView list_view_pet = (ListView) findViewById(R.id.list_view_pet);
+        // Setup cursor adapter using cursor from last step
+        PetCursorAdapter petCursorAdapter = new PetCursorAdapter(this, cursor);
+        // Attach cursor adapter to the ListView
+        list_view_pet.setAdapter(petCursorAdapter);
+    }
+
 
     /**
      * Temporary helper method to display information in the onscreen TextView about the state of
      * the pets database.
      */
-    private void displayDatabaseInfo() {
+    private void displayDatabaseInfo_text() {
 
         // Define a projection that specifies which columns from the database
         // you will actually use after this query.
@@ -82,7 +108,7 @@ public class CatalogActivity extends AppCompatActivity {
                 PetEntry.COLUMN_PET_NAME,
                 PetEntry.COLUMN_PET_BREED,
                 PetEntry.COLUMN_PET_GENDER,
-                PetEntry.COLUMN_PET_WEIGHT };
+                PetEntry.COLUMN_PET_WEIGHT};
 
         // Perform a query on the pets table
         Cursor cursor = getContentResolver().query(PetEntry.CONTENT_URI, projection, null, null, null);
