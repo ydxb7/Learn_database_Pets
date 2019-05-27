@@ -231,6 +231,10 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor cursor) {
+        // Bail early if the cursor is null or there is less than 1 row in the cursor
+        if (cursor == null || cursor.getCount() < 1) {
+            return;
+        }
         // Extract properties from cursor
         if (cursor.moveToFirst()) {
             String name = cursor.getString(cursor.getColumnIndex(PetEntry.COLUMN_PET_NAME));
@@ -251,7 +255,7 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
     public void onLoaderReset(Loader<Cursor> loader) {
         mNameEditText.setText("");
         mBreedEditText.setText("");
-        mWeightEditText.setText(0);
+        mWeightEditText.setText("");
         mGenderSpinner.setSelection(0);
     }
 
