@@ -15,14 +15,19 @@
  */
 package com.example.android.pets;
 
+import android.app.LoaderManager;
 import android.content.ContentValues;
+import android.content.CursorLoader;
 import android.content.Intent;
+import android.content.Loader;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.NavUtils;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -38,18 +43,28 @@ import com.example.android.pets.data.PetDbHelper;
 /**
  * Allows user to create a new pet or edit an existing one.
  */
-public class EditorActivity extends AppCompatActivity {
-
-    /** EditText field to enter the pet's name */
+public class EditorActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
+    private static final String LOG_TAG = EditorActivity.class.getSimpleName();
+    private static final int EXISTING_PET_LOADER = 1;
+    private Uri mCurrentPetUri = null;
+    /**
+     * EditText field to enter the pet's name
+     */
     private EditText mNameEditText;
 
-    /** EditText field to enter the pet's breed */
+    /**
+     * EditText field to enter the pet's breed
+     */
     private EditText mBreedEditText;
 
-    /** EditText field to enter the pet's weight */
+    /**
+     * EditText field to enter the pet's weight
+     */
     private EditText mWeightEditText;
 
-    /** EditText field to enter the pet's gender */
+    /**
+     * EditText field to enter the pet's gender
+     */
     private Spinner mGenderSpinner;
 
     /**
@@ -66,16 +81,8 @@ public class EditorActivity extends AppCompatActivity {
 
         // Use getIntent() and getData() to get the associated URI
         Intent intent = getIntent();
-        Uri currentPetUri = intent.getData();
-
-        // change app bar. If the intent DOES NOT contain a pet content URI, then we know that we are creating a new pet.
-        if(currentPetUri == null){
-            setTitle(R.string.editor_activity_title_new_pet);
-        }else{
-            setTitle(R.string.editor_activity_title_edit_pet);
-        }
-
-
+        mCurrentPetUri = intent.getData();
+        Log.v(LOG_TAG, "" + mCurrentPetUri);
 
         // Find all relevant views that we will need to read user input from
         mNameEditText = (EditText) findViewById(R.id.edit_pet_name);
@@ -84,6 +91,16 @@ public class EditorActivity extends AppCompatActivity {
         mGenderSpinner = (Spinner) findViewById(R.id.spinner_gender);
 
         setupSpinner();
+
+        // change app bar. If the intent DOES NOT contain a pet content URI, then we know that we are creating a new pet.
+        if (mCurrentPetUri == null) {
+            setTitle(R.string.editor_activity_title_new_pet);
+        } else {
+            setTitle(R.string.editor_activity_title_edit_pet);
+
+            // Initializes the CursorLoader. The URL_LOADER value is eventually passed to onCreateLoader().
+            getLoaderManager().initLoader(EXISTING_PET_LOADER, null, this);
+        }
     }
 
     /**
@@ -192,4 +209,51 @@ public class EditorActivity extends AppCompatActivity {
         }
         return super.onOptionsItemSelected(item);
     }
+
+    @Override
+    public Loader<Cursor> onCreateLoader(int loaderID, Bundle args) {
+        String[] projection = {
+                PetEntry._ID,
+                PetEntry.COLUMN_PET_NAME,
+                PetEntry.COLUMN_PET_BREED,
+                PetEntry.COLUMN_PET_GENDER,
+                PetEntry.COLUMN_PET_WEIGHT};
+        // Returns a new CursorLoader
+        return new CursorLoader(
+                this,   // Parent activity context
+                mCurrentPetUri,        // Table to query
+                projection,     // Projection to return
+                null,            // No selection clause
+                null,            // No selection arguments
+                null             // Default sort order
+        );
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor cursor) {
+        // Extract properties from cursor
+        if (cursor.moveToFirst()) {
+            String name = cursor.getString(cursor.getColumnIndex(PetEntry.COLUMN_PET_NAME));
+            String breed = cursor.getString(cursor.getColumnIndexOrThrow(PetEntry.COLUMN_PET_BREED));
+            int gender = cursor.getInt(cursor.getColumnIndexOrThrow(PetEntry.COLUMN_PET_GENDER));
+            int weight = cursor.getInt(cursor.getColumnIndexOrThrow(PetEntry.COLUMN_PET_WEIGHT));
+
+            // setup data
+            mNameEditText.setText(name);
+            mBreedEditText.setText(breed);
+            mWeightEditText.setText(Integer.toString(weight));
+            mGenderSpinner.setSelection(gender);
+        }
+
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+        mNameEditText.setText("");
+        mBreedEditText.setText("");
+        mWeightEditText.setText(0);
+        mGenderSpinner.setSelection(0);
+    }
+
+
 }

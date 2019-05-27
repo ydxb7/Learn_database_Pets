@@ -137,7 +137,6 @@ public class CatalogActivity extends AppCompatActivity implements LoaderManager.
         list_view_pet.setAdapter(mCursorAdapter);
     }
 
-
     /**
      * Temporary helper method to display information in the onscreen TextView about the state of
      * the pets database.
@@ -289,7 +288,7 @@ public class CatalogActivity extends AppCompatActivity implements LoaderManager.
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-        /*
+        /* adapter重新显示
          * Moves the query results into the adapter, causing the
          * ListView fronting this adapter to re-display
          */
