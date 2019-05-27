@@ -15,9 +15,11 @@
  */
 package com.example.android.pets;
 
+import android.app.AlertDialog;
 import android.app.LoaderManager;
 import android.content.ContentValues;
 import android.content.CursorLoader;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.Loader;
 import android.database.Cursor;
@@ -30,6 +32,7 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -47,6 +50,7 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
     private static final String LOG_TAG = EditorActivity.class.getSimpleName();
     private static final int EXISTING_PET_LOADER = 1;
     private Uri mCurrentPetUri = null;
+
     /**
      * EditText field to enter the pet's name
      */
@@ -74,6 +78,18 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
      */
     private int mGender = PetEntry.GENDER_UNKNOWN;
 
+
+    // 是否更改过pet表，如果用户更新了 pet 表的任何部分则为 true。
+    private boolean mPetHasChanged = false;
+    // 添加 OnTouchListener 来检查是否发生了更改：
+    private View.OnTouchListener mTouchListener = new View.OnTouchListener() {
+        @Override
+        public boolean onTouch(View view, MotionEvent motionEvent) {
+            mPetHasChanged = true;
+            return false;
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -91,6 +107,12 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
         mGenderSpinner = (Spinner) findViewById(R.id.spinner_gender);
 
         setupSpinner();
+
+        // set listener来判断pet是否更改过
+        mNameEditText.setOnTouchListener(mTouchListener);
+        mBreedEditText.setOnTouchListener(mTouchListener);
+        mWeightEditText.setOnTouchListener(mTouchListener);
+        mGenderSpinner.setOnTouchListener(mTouchListener);
 
         // change app bar. If the intent DOES NOT contain a pet content URI, then we know that we are creating a new pet.
         if (mCurrentPetUri == null) {
@@ -145,16 +167,19 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
     /**
      * Get user input from editor and save new pet into database.
      */
-    private void insertPet() {
+    private void savePet() {
         // Read from input fields
         // Use trim to eliminate leading or trailing white space
         String nameString = mNameEditText.getText().toString().trim();
         String breedString = mBreedEditText.getText().toString().trim();
         String weightString = mWeightEditText.getText().toString().trim();
-        int weight = Integer.parseInt(weightString);  // string -> int
+//        int weight = Integer.parseInt(weightString);  // string -> int
 
-        // Create database helper
-//        PetDbHelper mDbHelper = new PetDbHelper(this);
+        if (mCurrentPetUri == null &&
+                TextUtils.isEmpty(nameString) && TextUtils.isEmpty(breedString) &&
+                TextUtils.isEmpty(weightString) && mGender == PetEntry.GENDER_UNKNOWN) {
+            return;
+        }
 
         // Create a ContentValues object where column names are the keys,
         // and pet attributes from the editor are the values.
@@ -162,21 +187,41 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
         values.put(PetEntry.COLUMN_PET_NAME, nameString);
         values.put(PetEntry.COLUMN_PET_BREED, breedString);
         values.put(PetEntry.COLUMN_PET_GENDER, mGender);
+        // If the weight is not provided by the user, don't try to parse the string into an
+        // integer value. Use 0 by default.
+        int weight = 0;
+        if (!TextUtils.isEmpty(weightString)) {
+            weight = Integer.parseInt(weightString);
+        }
         values.put(PetEntry.COLUMN_PET_WEIGHT, weight);
 
-        // Insert a new row for pet in the database, returning the ID of that new row.
+        if (mCurrentPetUri == null) {
+            // Insert a new row for pet in the database, returning the ID of that new row.
 //        long newRowId = db.insert(PetEntry.TABLE_NAME, null, values);
-        Uri newUri = getContentResolver().insert(PetEntry.CONTENT_URI, values);
+            Uri newUri = getContentResolver().insert(PetEntry.CONTENT_URI, values);
 
-        // Show a toast message depending on whether or not the insertion was successful
-        if (newUri == null) {
-            // If the row ID is -1, then there was an error with insertion.
-            Toast.makeText(this, getString(R.string.editor_insert_pet_failed), Toast.LENGTH_SHORT).show();
+            // Show a toast message depending on whether or not the insertion was successful
+            if (newUri == null) {
+                // If the row ID is -1, then there was an error with insertion.
+                Toast.makeText(this, getString(R.string.editor_insert_pet_failed), Toast.LENGTH_SHORT).show();
+            } else {
+                // Otherwise, the insertion was successful and we can display a toast with the row ID.
+                Toast.makeText(this, getString(R.string.editor_insert_pet_successful), Toast.LENGTH_SHORT).show();
+            }
         } else {
-            // Otherwise, the insertion was successful and we can display a toast with the row ID.
-            Toast.makeText(this, getString(R.string.editor_insert_pet_successful), Toast.LENGTH_SHORT).show();
+            // Update a existing pet
+            int rowsAffected = getContentResolver().update(mCurrentPetUri, values, null, null);
+
+            // show a toast message
+            if (rowsAffected > 0) {
+                Toast.makeText(this, "Pet updated", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Error with updating pet", Toast.LENGTH_SHORT).show();
+            }
         }
+
     }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -193,7 +238,7 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
             // Respond to a click on the "Save" menu option
             case R.id.action_save:
                 // Save pet to database
-                insertPet();
+                savePet();
                 // Exit activity 退出当前activity
                 finish();
                 return true;
@@ -203,8 +248,25 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
                 return true;
             // Respond to a click on the "Up" arrow button in the app bar
             case android.R.id.home:
-                // Navigate back to parent activity (CatalogActivity)
-                NavUtils.navigateUpFromSameTask(this);
+                // If the pet hasn't changed, continue with navigating up to parent activity which is the {@link CatalogActivity}.
+                if (!mPetHasChanged) {
+                    NavUtils.navigateUpFromSameTask(EditorActivity.this);
+                    return true;
+                }
+
+                // Otherwise if there are unsaved changes, setup a dialog to warn the user.
+                // Create a click listener to handle the user confirming that
+                // changes should be discarded.
+                DialogInterface.OnClickListener discardButtonClickListener =
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                // User clicked "Discard" button, navigate to parent activity.
+                                NavUtils.navigateUpFromSameTask(EditorActivity.this);
+                            }
+                        };
+                // Show a dialog that notifies the user they have unsaved changes
+                showUnsavedChangesDialog(discardButtonClickListener);
                 return true;
         }
         return super.onOptionsItemSelected(item);
@@ -257,6 +319,50 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
         mBreedEditText.setText("");
         mWeightEditText.setText("");
         mGenderSpinner.setSelection(0);
+    }
+
+    // 创建“放弃更改”对话框的方法
+    private void showUnsavedChangesDialog(DialogInterface.OnClickListener discardButtonClickListener) {
+        // Create an AlertDialog.Builder and set the message, and click listeners
+        // for the positive and negative buttons on the dialog.
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage(R.string.unsaved_changes_dialog_msg);
+        builder.setPositiveButton(R.string.discard, discardButtonClickListener);
+        builder.setNegativeButton(R.string.keep_editing, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // User clicked the "Keep editing" button, so dismiss the dialog and continue editing the pet.
+                if (dialog != null) {
+                    dialog.dismiss();
+                }
+            }
+        });
+
+        // Create and show the AlertDialog
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
+    }
+
+    // 这是“返回”按钮的代码。你需要覆盖此活动的正常返回按钮。
+    @Override
+    public void onBackPressed() {
+        // If the pet hasn't changed, continue with handling back button press
+        if (!mPetHasChanged) {
+            super.onBackPressed();
+            return;
+        }
+
+        // 如果放弃更改，建立会关闭当前活动的放弃点击侦听器。然后将此侦听器传入刚创建的 showUnsavedChangesDialog 方法。
+        DialogInterface.OnClickListener discardButtonClickListener =
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        // User clicked "Discard" button, close the current activity.
+                        finish();
+                    }
+                };
+
+        // Show dialog that there are unsaved changes
+        showUnsavedChangesDialog(discardButtonClickListener);
     }
 
 
