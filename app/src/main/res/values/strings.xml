@@ -83,8 +83,14 @@
     <!-- Toast message in editor when current pet was successfully deleted [CHAR LIMIT=NONE] -->
     <string name="editor_delete_pet_successful">Pet deleted</string>
 
+    <!-- Toast message in Catalog all pets were successfully deleted [CHAR LIMIT=NONE] -->
+    <string name="catalog_delete_all_pets_successful">All pets deleted</string>
+
     <!-- Toast message in editor when current pet has failed to be deleted [CHAR LIMIT=NONE] -->
     <string name="editor_delete_pet_failed">Error with deleting pet</string>
+
+    <!-- Toast message in Catalog there are no pets to be deleted [CHAR LIMIT=NONE] -->
+    <string name="catalog_delete_all_pet_failed">Error with deleting pets</string>
 
     <!-- Dialog message to ask the user to confirm deleting the current pet [CHAR LIMIT=NONE] -->
     <string name="delete_dialog_msg">Delete this pet?</string>
@@ -94,4 +100,10 @@
 
     <!-- Dialog button text for the option to cancel deletion of the current pet [CHAR LIMIT=20] -->
     <string name="cancel">Cancel</string>
+
+    <!-- Dialog message to ask the user to confirm deleting the current pet [CHAR LIMIT=NONE] -->
+    <string name="delete_all_dialog_msg">Delete All pets?</string>
+
+    <!-- Label for the pet's breed if the breed is unknown [CHAR LIMIT=20] -->
+    <string name="unknown_breed">Unknown breed</string>
 </resources>

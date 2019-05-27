@@ -409,7 +409,6 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
      * Perform the deletion of the pet in the database.
      */
     private void deletePet() {
-        // TODO: Implement this method
         if(mCurrentPetUri != null){
             int rowsDeleted = getContentResolver().delete(mCurrentPetUri, null, null);
             // Show a toast message depending on whether or not the delete was successful.
